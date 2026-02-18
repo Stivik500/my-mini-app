@@ -2,54 +2,327 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Мое Мини-Приложение</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Telegram Shop</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body {
-            font-family: sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--tg-theme-bg-color, #ffffff);
             color: var(--tg-theme-text-color, #000000);
+            margin: 0;
+            padding: 0;
             display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Навигация */
+        .navbar {
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            border-top: 1px solid var(--tg-theme-hint-color, #ccc);
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background: var(--tg-theme-bg-color, #fff);
+            z-index: 100;
+        }
+        .nav-btn {
+            background: none;
+            border: none;
+            color: var(--tg-theme-hint-color, #888);
+            font-size: 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+        }
+        .nav-btn.active {
+            color: var(--tg-theme-button-color, #3390ec);
+            font-weight: bold;
+        }
+        .nav-icon { font-size: 20px; margin-bottom: 2px; }
+
+        /* Контент страниц */
+        .page {            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            padding-bottom: 70px; /* место под меню */
+            display: none;
+        }
+        .page.active { display: block; }
+
+        /* Карточка товара */
+        .product-card {
+            background: var(--tg-theme-secondary-bg-color, #f5f5f5);
+            border-radius: 15px;
+            padding: 15px;
+            text-align: center;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            position: relative; /* Для позиционирования плашки "Куплено" */
+            overflow: hidden;
+        }
+        .product-img {
+            width: 120px;
+            height: 120px;
+            object-fit: contain;
+            margin-bottom: 10px;
+        }
+        .rating { color: #ffc107; font-size: 14px; margin: 5px 0; }
+        .daisies { color: #4caf50; font-size: 12px; }
+        
+        .btn-main {
+            background-color: var(--tg-theme-button-color, #3390ec);
+            color: var(--tg-theme-button-text-color, #fff);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+
+        /* Модальное окно (Подробности) */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 200;
+            justify-content: center;
+            align-items: flex-end;
+        }        .modal-content {
+            background: var(--tg-theme-bg-color, #fff);
+            width: 100%;
+            border-radius: 20px 20px 0 0;
+            padding: 25px;
+            box-sizing: border-box;
+            animation: slideUp 0.3s ease-out;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+        /* Экраны загрузки и успеха */
+        .loader-screen, .success-screen {
+            display: none;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             height: 100vh;
-            margin: 0;
+            position: fixed;
+            top: 0; left: 0; width: 100%;
+            background: var(--tg-theme-bg-color, #fff);
+            z-index: 300;
+            text-align: center;
         }
-        h1 { margin-bottom: 20px; text-align: center; }
-        p { margin-bottom: 30px; text-align: center; color: #555; }
-        button {
-            padding: 15px 30px;
-            font-size: 18px;
-            background-color: var(--tg-theme-button-color, #3390ec);
-            color: var(--tg-theme-button-text-color, #ffffff);
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--tg-theme-button-color, #3390ec);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
         }
-        button:active { transform: scale(0.98); }
+        .dots-spinner { font-size: 30px; letter-spacing: 5px; animation: blink 1.5s infinite; display: none; }
+        .checkmark {
+            width: 60px; height: 60px;
+            border-radius: 50%;
+            background: #4caf50;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 30px;
+            margin-bottom: 20px;
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes blink { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
+        @keyframes popIn { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+
+        .status-text { font-size: 18px; font-weight: bold; margin-bottom: 10px; }
+        .sub-text { color: var(--tg-theme-hint-color, #888); font-size: 14px; }
+        /* Статус куплено на главной */
+        .bought-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.85);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 15px;
+            font-weight: bold;
+            color: #4caf50;
+            font-size: 20px;
+            text-transform: uppercase;
+            z-index: 10;
+        }
+        .bought-overlay span { font-size: 40px; display: block; margin-bottom: 5px; }
     </style>
 </head>
 <body>
 
-    <h1>Привет! 👋</h1>
-    <p>Твое первое Mini App работает!</p>
-    
-    <button onclick="closeApp()">❌ Закрыть приложение</button>
+    <!-- ГЛАВНАЯ СТРАНИЦА -->
+    <div id="home-page" class="page active">
+        <h2 style="text-align:center;">Магазин Ромашек 🌼</h2>
+        
+        <div class="product-card" onclick="openProductDetails()">
+            <div class="bought-overlay" id="bought-status">
+                <span>✅</span>КУПЛЕНО!
+            </div>
+            
+            <!-- ТВОЯ ССЫЛКА НА РОМАШКУ -->
+            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR7kQOJWw3QYInj6qZ1w7tmfUOZkGKo7JIa5n99tz6uTw&s=10" alt="Ромашка" class="product-img">
+            
+            <h3>Супер Ромашка</h3>
+            <div class="rating">⭐⭐⭐⭐⭐ 4,7</div>
+            <div class="daisies">🌼🌼🌼🌼🌼</div>
+            <p style="font-size: 13px; color: #666;">Нажми для подробностей</p>
+        </div>
+    </div>
+
+    <!-- СТРАНИЦА ПРОФИЛЬ -->
+    <div id="profile-page" class="page">
+        <h2>Профиль</h2>
+        <p>Раздел в разработке... 🔜</p>
+        <div style="text-align:center; font-size: 50px; margin-top: 50px;">👤</div>
+    </div>
+
+    <!-- СТРАНИЦА БАНК -->
+    <div id="bank-page" class="page">        <h2>Банк</h2>
+        <p>Раздел в разработке... 🔜</p>
+        <div style="text-align:center; font-size: 50px; margin-top: 50px;">🏦</div>
+    </div>
+
+    <!-- НИЖНЕЕ МЕНЮ -->
+    <div class="navbar">
+        <button class="nav-btn active" onclick="switchTab('home')">
+            <span class="nav-icon">🏠</span> Главная
+        </button>
+        <button class="nav-btn" onclick="switchTab('profile')">
+            <span class="nav-icon">👤</span> Профиль
+        </button>
+        <button class="nav-btn" onclick="switchTab('bank')">
+            <span class="nav-icon">🏦</span> Банк
+        </button>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО ТОВАРА -->
+    <div id="product-modal" class="modal" onclick="if(event.target === this) closeProductDetails()">
+        <div class="modal-content">
+            <!-- ТВОЯ ССЫЛКА НА РОМАШКУ -->
+            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR7kQOJWw3QYInj6qZ1w7tmfUOZkGKo7JIa5n99tz6uTw&s=10" alt="Ромашка" style="width: 100px; display:block; margin: 0 auto 15px; border-radius: 10px;">
+            
+            <h3 style="text-align:center;">Супер Ромашка</h3>
+            <div class="rating" style="text-align:center;">⭐⭐⭐⭐⭐ 4,7</div>
+            <p style="line-height: 1.5; color: #555; margin-top: 15px;">
+                Это удивительная цифровая ромашка. Она приносит удачу, радует глаз и отлично смотрится в вашем цифровом саду. 
+                Рейтинг 4.7 основан на отзывах тысяч счастливых пользователей!
+            </p>
+            <div style="font-size: 20px; font-weight: bold; margin: 15px 0; text-align: center;">Цена: 50 💎</div>
+            
+            <button class="btn-main" onclick="startPaymentProcess()">💳 Купить сейчас</button>
+            <button class="btn-main" style="background-color: var(--tg-theme-secondary-bg-color, #eee); color: #333; margin-top: 10px;" onclick="closeProductDetails()">Закрыть</button>
+        </div>
+    </div>
+
+    <!-- ЭКРАН ЗАГРУЗКИ ОПЛАТЫ -->
+    <div id="loading-screen" class="loader-screen">
+        <div class="spinner" id="circle-loader"></div>
+        <div class="dots-spinner" id="dots-loader">Загрузка...</div>
+        <div class="status-text" id="load-status">Обработка платежа...</div>
+        <div class="sub-text">Пожалуйста, не закрывайте приложение</div>
+    </div>
+
+    <!-- ЭКРАН УСПЕХА -->
+    <div id="success-screen" class="success-screen">
+        <div class="checkmark">✓</div>
+        <div class="status-text">Оплачено!</div>
+        <div class="sub-text">Ваш товар уже в пути</div>        <button class="btn-main" style="width: auto; margin-top: 30px;" onclick="finishSuccess()">Закрыть</button>
+    </div>
 
     <script>
         let tg = window.Telegram.WebApp;
-        tg.expand(); 
+        tg.expand();
 
-        function closeApp() {
+        // Переключение вкладок
+        function switchTab(tabName) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById(tabName + '-page').classList.add('active');
+            const btns = document.querySelectorAll('.nav-btn');
+            if(tabName === 'home') btns[0].classList.add('active');
+            if(tabName === 'profile') btns[1].classList.add('active');
+            if(tabName === 'bank') btns[2].classList.add('active');
+        }
+
+        // Модальное окно
+        function openProductDetails() {
+            document.getElementById('product-modal').style.display = 'flex';
+        }
+        function closeProductDetails() {
+            document.getElementById('product-modal').style.display = 'none';
+        }
+
+        // Логика покупки
+        function startPaymentProcess() {
+            closeProductDetails();
+            
+            const data = {
+                action: "buy_request",
+                item_id: "daisy_001",
+                item_name: "Супер Ромашка",
+                price: 50,
+                // Ссылка на картинку для бота
+                image_url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR7kQOJWw3QYInj6qZ1w7tmfUOZkGKo7JIa5n99tz6uTw&s=10"
+            };
+            tg.sendData(JSON.stringify(data));
             tg.close();
         }
-        
-        // Сообщаем телеграму, что приложение готово
-        tg.ready();
-    </script>
 
+        // Проверка хеша при старте (для анимации успеха)
+        if (window.location.hash === "#success") {
+            runSuccessAnimation();
+        }
+
+        function runSuccessAnimation() {
+            document.getElementById('loading-screen').style.display = 'flex';            
+            // Этап 1: Круглая загрузка (2 сек)
+            setTimeout(() => {
+                document.getElementById('circle-loader').style.display = 'none';
+                document.getElementById('dots-loader').style.display = 'block';
+                document.getElementById('load-status').innerText = "Связь с банком...";
+                
+                // Этап 2: Точки (3 сек)
+                setTimeout(() => {
+                    document.getElementById('loading-screen').style.display = 'none';
+                    document.getElementById('success-screen').style.display = 'flex';
+                    
+                    localStorage.setItem('daisy_bought', 'true');
+                }, 3000);
+            }, 2000);
+        }
+
+        function finishSuccess() {
+            window.location.hash = "";
+            document.getElementById('success-screen').style.display = 'none';
+            switchTab('home');
+            
+            if(localStorage.getItem('daisy_bought') === 'true') {
+                document.getElementById('bought-status').style.display = 'flex';
+            }
+        }
+
+        // Проверка при обычном старте
+        if(localStorage.getItem('daisy_bought') === 'true') {
+            document.getElementById('bought-status').style.display = 'flex';
+        }
+    </script>
 </body>
-  </html>
+    </html>
