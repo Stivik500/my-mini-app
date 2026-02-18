@@ -3,326 +3,159 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Telegram Shop</title>
+    <title>Doll Shop</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--tg-theme-bg-color, #ffffff);
-            color: var(--tg-theme-text-color, #000000);
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        /* Навигация */
-        .navbar {
-            display: flex;
-            justify-content: space-around;
-            padding: 10px 0;
-            border-top: 1px solid var(--tg-theme-hint-color, #ccc);
-            position: fixed;
-            bottom: 0;
-            width: 100%;
-            background: var(--tg-theme-bg-color, #fff);
-            z-index: 100;
-        }
-        .nav-btn {
-            background: none;
-            border: none;
-            color: var(--tg-theme-hint-color, #888);
-            font-size: 14px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            cursor: pointer;
-        }
-        .nav-btn.active {
-            color: var(--tg-theme-button-color, #3390ec);
-            font-weight: bold;
-        }
-        .nav-icon { font-size: 20px; margin-bottom: 2px; }
-
-        /* Контент страниц */
-        .page {            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
-            padding-bottom: 70px; /* место под меню */
-            display: none;
-        }
-        .page.active { display: block; }
-
-        /* Карточка товара */
-        .product-card {
-            background: var(--tg-theme-secondary-bg-color, #f5f5f5);
-            border-radius: 15px;
-            padding: 15px;
-            text-align: center;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            position: relative; /* Для позиционирования плашки "Куплено" */
-            overflow: hidden;
-        }
-        .product-img {
-            width: 120px;
-            height: 120px;
-            object-fit: contain;
-            margin-bottom: 10px;
-        }
-        .rating { color: #ffc107; font-size: 14px; margin: 5px 0; }
-        .daisies { color: #4caf50; font-size: 12px; }
-        
-        .btn-main {
-            background-color: var(--tg-theme-button-color, #3390ec);
-            color: var(--tg-theme-button-text-color, #fff);
-            border: none;
-            padding: 12px 24px;
-            border-radius: 10px;
-            font-size: 16px;
-            width: 100%;
-            margin-top: 10px;
-            cursor: pointer;
-        }
-
-        /* Модальное окно (Подробности) */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 200;
-            justify-content: center;
-            align-items: flex-end;
-        }        .modal-content {
-            background: var(--tg-theme-bg-color, #fff);
-            width: 100%;
-            border-radius: 20px 20px 0 0;
-            padding: 25px;
-            box-sizing: border-box;
-            animation: slideUp 0.3s ease-out;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-
-        /* Экраны загрузки и успеха */
-        .loader-screen, .success-screen {
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            position: fixed;
-            top: 0; left: 0; width: 100%;
-            background: var(--tg-theme-bg-color, #fff);
-            z-index: 300;
-            text-align: center;
-        }
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid var(--tg-theme-button-color, #3390ec);
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin-bottom: 20px;
-        }
-        .dots-spinner { font-size: 30px; letter-spacing: 5px; animation: blink 1.5s infinite; display: none; }
-        .checkmark {
-            width: 60px; height: 60px;
-            border-radius: 50%;
-            background: #4caf50;
-            display: flex; align-items: center; justify-content: center;
-            color: white; font-size: 30px;
-            margin-bottom: 20px;
-            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        @keyframes blink { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
-        @keyframes popIn { 0% { transform: scale(0); } 100% { transform: scale(1); } }
-
-        .status-text { font-size: 18px; font-weight: bold; margin-bottom: 10px; }
-        .sub-text { color: var(--tg-theme-hint-color, #888); font-size: 14px; }
-        /* Статус куплено на главной */
-        .bought-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255,255,255,0.85);
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            border-radius: 15px;
-            font-weight: bold;
-            color: #4caf50;
-            font-size: 20px;
-            text-transform: uppercase;
-            z-index: 10;
-        }
-        .bought-overlay span { font-size: 40px; display: block; margin-bottom: 5px; }
-    </style>
+    <link rel="stylesheet" href="style.css">
+    <!-- Иконки -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
 
-    <!-- ГЛАВНАЯ СТРАНИЦА -->
-    <div id="home-page" class="page active">
-        <h2 style="text-align:center;">Магазин Ромашек 🌼</h2>
-        
-        <div class="product-card" onclick="openProductDetails()">
-            <div class="bought-overlay" id="bought-status">
-                <span>✅</span>КУПЛЕНО!
+    <!-- 1. ЭКРАН ЗАГРУЗКИ (SPLASH SCREEN) -->
+    <div id="splash-screen" class="screen active">
+        <div class="logo-container">
+            <div class="logo-text">ds</div>
+        </div>
+        <div class="loader"></div>
+    </div>
+
+    <!-- 2. ЭКРАН РЕГИСТРАЦИИ / ВХОДА -->
+    <div id="auth-screen" class="screen">
+        <div class="auth-container">
+            <h1 class="app-title">Doll Shop</h1>
+            
+            <!-- Шаг 1: Почта -->
+            <div id="step-email" class="auth-step">
+                <h2>Вход</h2>
+                <p>Введите вашу почту</p>
+                <input type="email" id="email-input" placeholder="example@mail.ru" class="wb-input">
+                <button onclick="goToStep('password')" class="wb-btn">Далее</button>
             </div>
-            
-            <!-- ТВОЯ ССЫЛКА НА РОМАШКУ -->
-            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR7kQOJWw3QYInj6qZ1w7tmfUOZkGKo7JIa5n99tz6uTw&s=10" alt="Ромашка" class="product-img">
-            
-            <h3>Супер Ромашка</h3>
-            <div class="rating">⭐⭐⭐⭐⭐ 4,7</div>
-            <div class="daisies">🌼🌼🌼🌼🌼</div>
-            <p style="font-size: 13px; color: #666;">Нажми для подробностей</p>
+
+            <!-- Шаг 2: Пароль -->
+            <div id="step-password" class="auth-step hidden">
+                <div class="back-arrow" onclick="goToStep('email')">
+                    <i class="fas fa-arrow-left"></i>
+                </div>
+                <h2>Пароль</h2>
+                <p>Придумайте пароль</p>
+                <input type="password" id="password-input" placeholder="••••••••" class="wb-input">
+                <button onclick="goToStep('profile')" class="wb-btn">Далее</button>
+            </div>
+
+            <!-- Шаг 3: Профиль (Аватар + Имя) -->
+            <div id="step-profile" class="auth-step hidden">
+                <div class="back-arrow" onclick="goToStep('password')">
+                    <i class="fas fa-arrow-left"></i>
+                </div>                <h2>Профиль</h2>
+                <div class="avatar-upload-container" id="avatar-trigger">
+                    <div class="avatar-placeholder">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <p class="hint">Нажми для фото</p>
+                </div>
+                <input type="text" id="name-input" placeholder="Ваше имя" class="wb-input">
+                <button onclick="finishAuth()" class="wb-btn">Готово</button>
+            </div>
         </div>
     </div>
 
-    <!-- СТРАНИЦА ПРОФИЛЬ -->
-    <div id="profile-page" class="page">
-        <h2>Профиль</h2>
-        <p>Раздел в разработке... 🔜</p>
-        <div style="text-align:center; font-size: 50px; margin-top: 50px;">👤</div>
+    <!-- 3. ГЛАВНОЕ ПРИЛОЖЕНИЕ (MAIN APP) -->
+    <div id="main-app" class="screen hidden">
+        
+        <!-- Верхняя панель (Поиск) -->
+        <header class="top-bar">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Поиск кукол..." id="search-input">
+            </div>
+        </header>
+
+        <!-- Контент (Скроллится) -->
+        <div class="content-scroll">
+            
+            <!-- Баннер -->
+            <div class="banner">
+                <h2>СЕЗОН СКИДОК</h2>
+                <p>До -70% на всё!</p>
+            </div>
+
+            <!-- Сетка товаров -->
+            <h3 class="section-title">Подобрали для вас</h3>
+            <div class="products-grid" id="products-container">
+                <!-- Товары будут добавлены через JS -->
+            </div>
+        </div>
+
+        <!-- Нижнее меню (Nav Bar) -->
+        <nav class="bottom-nav">
+            <div class="nav-item active" onclick="switchTab('home')">
+                <i class="fas fa-home"></i>
+                <span>Главная</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('catalog')">
+                <i class="fas fa-th-large"></i>
+                <span>Каталог</span>
+            </div>            <div class="nav-item" onclick="switchTab('cart')">
+                <i class="fas fa-shopping-cart"></i>
+                <span class="badge" id="cart-count">0</span>
+                <span>Корзина</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('profile')">
+                <i class="fas fa-user"></i>
+                <span>Профиль</span>
+            </div>
+        </nav>
     </div>
 
-    <!-- СТРАНИЦА БАНК -->
-    <div id="bank-page" class="page">        <h2>Банк</h2>
-        <p>Раздел в разработке... 🔜</p>
-        <div style="text-align:center; font-size: 50px; margin-top: 50px;">🏦</div>
+    <!-- 4. ЭКРАН ПРОФИЛЯ (Внутри Main App) -->
+    <div id="profile-view" class="full-screen-view hidden">
+        <div class="view-header">
+            <div class="back-btn" onclick="closeView('profile')"><i class="fas fa-arrow-left"></i></div>
+            <h2>Профиль</h2>
+            <div style="width: 24px;"></div>
+        </div>
+        <div class="profile-content">
+            <div class="profile-avatar-large" id="profile-avatar-display">
+                <i class="fas fa-user"></i>
+            </div>
+            <h3 id="profile-name-display">Имя пользователя</h3>
+            <p id="profile-email-display">email@example.com</p>
+            
+            <div class="wallet-card">
+                <div class="wallet-balance">0 ₽</div>
+                <div class="wallet-label">Doll Кошелёк</div>
+                <button class="fill-btn">Пополнить</button>
+            </div>
+
+            <div class="menu-list">
+                <div class="menu-item">Мои заказы</div>
+                <div class="menu-item">Избранное</div>
+                <div class="menu-item">Настройки</div>
+            </div>
+        </div>
     </div>
 
-    <!-- НИЖНЕЕ МЕНЮ -->
-    <div class="navbar">
-        <button class="nav-btn active" onclick="switchTab('home')">
-            <span class="nav-icon">🏠</span> Главная
-        </button>
-        <button class="nav-btn" onclick="switchTab('profile')">
-            <span class="nav-icon">👤</span> Профиль
-        </button>
-        <button class="nav-btn" onclick="switchTab('bank')">
-            <span class="nav-icon">🏦</span> Банк
-        </button>
-    </div>
-
-    <!-- МОДАЛЬНОЕ ОКНО ТОВАРА -->
-    <div id="product-modal" class="modal" onclick="if(event.target === this) closeProductDetails()">
+    <!-- 5. МОДАЛЬНОЕ ОКНО: ДОБАВИТЬ ТОВАР (SECRET ADMIN) -->
+    <div id="add-product-modal" class="modal hidden">
         <div class="modal-content">
-            <!-- ТВОЯ ССЫЛКА НА РОМАШКУ -->
-            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR7kQOJWw3QYInj6qZ1w7tmfUOZkGKo7JIa5n99tz6uTw&s=10" alt="Ромашка" style="width: 100px; display:block; margin: 0 auto 15px; border-radius: 10px;">
+            <h3>✨ Добавить товар</h3>
+            <input type="text" id="new-prod-name" placeholder="Название куклы" class="wb-input">
+            <input type="number" id="new-prod-price" placeholder="Цена (₽)" class="wb-input">
             
-            <h3 style="text-align:center;">Супер Ромашка</h3>
-            <div class="rating" style="text-align:center;">⭐⭐⭐⭐⭐ 4,7</div>
-            <p style="line-height: 1.5; color: #555; margin-top: 15px;">
-                Это удивительная цифровая ромашка. Она приносит удачу, радует глаз и отлично смотрится в вашем цифровом саду. 
-                Рейтинг 4.7 основан на отзывах тысяч счастливых пользователей!
-            </p>
-            <div style="font-size: 20px; font-weight: bold; margin: 15px 0; text-align: center;">Цена: 50 💎</div>
-            
-            <button class="btn-main" onclick="startPaymentProcess()">💳 Купить сейчас</button>
-            <button class="btn-main" style="background-color: var(--tg-theme-secondary-bg-color, #eee); color: #333; margin-top: 10px;" onclick="closeProductDetails()">Закрыть</button>
+            <div class="file-upload-area">
+                <i class="fas fa-camera"></i>
+                <p>Фото товара (до 10)</p>                <input type="file" id="new-prod-files" multiple accept="image/*">
+            </div>
+
+            <div class="modal-actions">
+                <button onclick="closeModal()" class="btn-cancel">Отмена</button>
+                <button onclick="submitNewProduct()" class="wb-btn">Добавить</button>
+            </div>
         </div>
     </div>
 
-    <!-- ЭКРАН ЗАГРУЗКИ ОПЛАТЫ -->
-    <div id="loading-screen" class="loader-screen">
-        <div class="spinner" id="circle-loader"></div>
-        <div class="dots-spinner" id="dots-loader">Загрузка...</div>
-        <div class="status-text" id="load-status">Обработка платежа...</div>
-        <div class="sub-text">Пожалуйста, не закрывайте приложение</div>
-    </div>
-
-    <!-- ЭКРАН УСПЕХА -->
-    <div id="success-screen" class="success-screen">
-        <div class="checkmark">✓</div>
-        <div class="status-text">Оплачено!</div>
-        <div class="sub-text">Ваш товар уже в пути</div>        <button class="btn-main" style="width: auto; margin-top: 30px;" onclick="finishSuccess()">Закрыть</button>
-    </div>
-
-    <script>
-        let tg = window.Telegram.WebApp;
-        tg.expand();
-
-        // Переключение вкладок
-        function switchTab(tabName) {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            
-            document.getElementById(tabName + '-page').classList.add('active');
-            const btns = document.querySelectorAll('.nav-btn');
-            if(tabName === 'home') btns[0].classList.add('active');
-            if(tabName === 'profile') btns[1].classList.add('active');
-            if(tabName === 'bank') btns[2].classList.add('active');
-        }
-
-        // Модальное окно
-        function openProductDetails() {
-            document.getElementById('product-modal').style.display = 'flex';
-        }
-        function closeProductDetails() {
-            document.getElementById('product-modal').style.display = 'none';
-        }
-
-        // Логика покупки
-        function startPaymentProcess() {
-            closeProductDetails();
-            
-            const data = {
-                action: "buy_request",
-                item_id: "daisy_001",
-                item_name: "Супер Ромашка",
-                price: 50,
-                // Ссылка на картинку для бота
-                image_url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR7kQOJWw3QYInj6qZ1w7tmfUOZkGKo7JIa5n99tz6uTw&s=10"
-            };
-            tg.sendData(JSON.stringify(data));
-            tg.close();
-        }
-
-        // Проверка хеша при старте (для анимации успеха)
-        if (window.location.hash === "#success") {
-            runSuccessAnimation();
-        }
-
-        function runSuccessAnimation() {
-            document.getElementById('loading-screen').style.display = 'flex';            
-            // Этап 1: Круглая загрузка (2 сек)
-            setTimeout(() => {
-                document.getElementById('circle-loader').style.display = 'none';
-                document.getElementById('dots-loader').style.display = 'block';
-                document.getElementById('load-status').innerText = "Связь с банком...";
-                
-                // Этап 2: Точки (3 сек)
-                setTimeout(() => {
-                    document.getElementById('loading-screen').style.display = 'none';
-                    document.getElementById('success-screen').style.display = 'flex';
-                    
-                    localStorage.setItem('daisy_bought', 'true');
-                }, 3000);
-            }, 2000);
-        }
-
-        function finishSuccess() {
-            window.location.hash = "";
-            document.getElementById('success-screen').style.display = 'none';
-            switchTab('home');
-            
-            if(localStorage.getItem('daisy_bought') === 'true') {
-                document.getElementById('bought-status').style.display = 'flex';
-            }
-        }
-
-        // Проверка при обычном старте
-        if(localStorage.getItem('daisy_bought') === 'true') {
-            document.getElementById('bought-status').style.display = 'flex';
-        }
-    </script>
+    <!-- Подключаем скрипт -->
+    <script src="script.js"></script>
 </body>
     </html>
